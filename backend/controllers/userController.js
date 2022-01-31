@@ -1,5 +1,6 @@
 const asyncHandler = require("express-async-handler")
 const bcrypt = require("bcryptjs")
+const jwt = require("jsonwebtoken")
 const User = require("../models/userModel")
 
 // POST - register user - /api/users - public
@@ -34,8 +35,9 @@ if(user){
     res.status(201).json({
         _id: user._id, 
         name: user.name, 
-        email: 
-        user.email}
+        email: user.email, 
+        token: generateToken(user._id)
+    }
         )
 } else {
     res.status(400)
@@ -45,8 +47,33 @@ if(user){
 
 // POST - login user - /api/users/login - public
 const loginUser = asyncHandler(async (req,res) => {
-    res.send("Login Route")
+    const {email, password} = req.body;
+
+    const user = await User.findOne({email})
+    const comparePswd = await bcrypt.compare(password, user.password)
+
+    // check user and pswd match
+    if(user && comparePswd){
+        res.status(200).json({
+            _id: user._id, 
+            name: user.name, 
+            email: 
+            user.email,
+             token: generateToken(user._id)
+        }
+            )
+    } else {
+        res.status(401)
+        throw new Error("Not Authorized")
+    }
 })
+
+// generate token
+const generateToken = (id) => {
+    return jwt.sign({id: id}, process.env.JWT_SECRET, {
+        expiresIn: '10d'
+    })
+}
 
 module.exports = {
     registerUser, loginUser
